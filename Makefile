@@ -2,6 +2,8 @@ all: out/Scheduler.sol abi/Scheduler.abi
 
 out/Scheduler.sol: src/Scheduler.sol
 	forge build
+
+abi/Scheduler.abi: src/Scheduler.sol
 	solc --abi src/Scheduler.sol -o abi
 
 clean:
