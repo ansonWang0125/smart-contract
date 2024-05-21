@@ -18,6 +18,7 @@ contract Scheduler {
         uint256 status;
     }
 
+    event RegisterCluster(address provider, uint256 gpuId, uint256 clusterSize);
     event StartRun(address provider, uint256 taskIndex, string dataImage, string trainImage);
 
     uint256 private randomNumber;
@@ -32,6 +33,8 @@ contract Scheduler {
     function registerCluster(uint256 gpuId, uint256 clusterSize) public returns (uint256) {
         address provider = msg.sender;
         clusters.push(Cluster(provider, gpuId, clusterSize, true));
+
+        emit RegisterCluster(provider, gpuId, clusterSize);
 
         return clusters.length - 1;         // cluster index
     }
@@ -93,5 +96,20 @@ contract Scheduler {
     
     function getClusters() public view returns (Cluster[] memory) {
         return clusters;
+    }
+
+    function getTasks() public view returns (Task[] memory) {
+        Task[] memory userTasks = new Task[](tasks.length);
+        uint256 userTasksCount = 0;
+        for (uint256 i = 0; i < tasks.length; i++) {
+            if (tasks[i].provider == msg.sender) {
+                userTasks[userTasksCount] = tasks[i];
+                userTasksCount++;
+            }
+        }
+        assembly {
+            mstore(userTasks, userTasksCount)
+        }
+        return userTasks;
     }
 }
