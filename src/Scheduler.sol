@@ -33,10 +33,6 @@ contract Scheduler {
     function registerCluster(uint256 gpuId, uint256 clusterSize) public returns (uint256) {
         address provider = msg.sender;
         clusters.push(Cluster(provider, gpuId, clusterSize, true));
-
-        emit RegisterCluster(provider, gpuId, clusterSize);
-
-        return clusters.length - 1;         // cluster index
     }
 
     function _registerTaskWithSpecificCluster(string memory dataImage, string memory trainImage, uint256 clusterIndex) internal returns (uint256) {
