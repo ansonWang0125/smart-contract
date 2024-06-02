@@ -82,12 +82,12 @@ contract Token is IERC20 {
         string(abi.encodePacked("balance not enough ", uintToString(numTokens), " > ", uintToString(balances[owner])))
     );
     require(
-        numTokens <= allowed[owner][buyer], // msg.sender
+        numTokens <= allowed[owner][msg.sender], // msg.sender
         string(abi.encodePacked("allowed not enough ", uintToString(numTokens), " > ", uintToString(allowed[owner][msg.sender])))
     );
         balances[owner] = balances[owner] - numTokens;
-        allowed[owner][buyer] =
-                allowed[owner][buyer] - numTokens; // // msg.sender
+        allowed[owner][msg.sender] =
+                allowed[owner][msg.sender] - numTokens; // // msg.sender
         balances[buyer] = balances[buyer] + numTokens;
         emit Transfer(owner, buyer, numTokens);
         return true;

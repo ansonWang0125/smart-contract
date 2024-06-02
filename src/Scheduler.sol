@@ -81,8 +81,6 @@ contract Scheduler {
         // random
         index = _getRandomNumber() % index;
         _registerTaskWithSpecificCluster(dataImage, trainImage, suitable_clusters[index]);       // return task index
-        token.transferFrom(msg.sender, address(this), 1000);
-        token.approve(clusters[suitable_clusters[index]].provider, 1000);
     }
 
     function updateStatus(uint256 taskIndex, uint256 newStatus) public { // add time paremeter (s)
@@ -102,7 +100,7 @@ contract Scheduler {
             clusters[task.clusterIndex].available = true;
         }
         if (newStatus == 4){
-            token.transferFrom(address(this), task.provider, 1000);
+            token.transferFrom(task.client, task.provider, 1000);
         }
     }
 
