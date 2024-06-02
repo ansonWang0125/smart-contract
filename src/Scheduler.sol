@@ -59,12 +59,6 @@ contract Scheduler {
         tasks.push(Task(provider, client, clusterIndex, dataImage, trainImage, 0));
 
         emit StartRun(provider, tasks.length-1, dataImage, trainImage);
-          // task index
-        if (client == msg.sender) {
-            emit TaskAccessed(client, msg.sender, true);
-        } else {
-            emit TaskAccessed(client, msg.sender, false);
-        }
     }
 
     function registerTaskWithConditions(string memory dataImage, string memory trainImage, uint256 gpuId, uint256 clusterSize) public {
@@ -81,6 +75,12 @@ contract Scheduler {
         // random
         index = _getRandomNumber() % index;
         _registerTaskWithSpecificCluster(dataImage, trainImage, suitable_clusters[index]);       // return task index
+        token.approve(address(this), 1000);
+    }
+
+    function unregister(uint256 clusterIndex) public {
+        require(clusters[clusterIndex].provider == msg.sender, "you are not the provider for this cluster");
+        clusters[clusterIndex].available = false;
     }
 
     function updateStatus(uint256 taskIndex, uint256 newStatus) public { // add time paremeter (s)

@@ -43,8 +43,8 @@ contract Token is IERC20 {
 
     function approve(address delegate,
                         uint numTokens) public returns (bool) {
-        allowed[msg.sender][delegate] = numTokens;
-        emit Approval(msg.sender, delegate, numTokens);
+        allowed[tx.origin][delegate] = numTokens;
+        emit Approval(tx.origin, delegate, numTokens);
         return true;
     }
 
