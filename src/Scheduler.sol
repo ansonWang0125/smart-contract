@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
+import "./Token.sol";
 
 contract Scheduler {
     struct Cluster {
@@ -18,8 +19,21 @@ contract Scheduler {
         uint256 status;
     }
 
+    struct Log {
+        address sender;
+        address client;
+    }
+
     event RegisterCluster(address provider, uint256 gpuId, uint256 clusterSize);
     event StartRun(address provider, uint256 taskIndex, string dataImage, string trainImage);
+    event TaskAccessed(address client, address caller, bool isEqual);
+    event LogThis(string msg);
+
+    Token public token;
+
+    constructor(address tokenAddress) {
+        token = Token(tokenAddress);
+    }
 
     uint256 private randomNumber;
     Cluster[] public clusters;
@@ -33,9 +47,10 @@ contract Scheduler {
     function registerCluster(uint256 gpuId, uint256 clusterSize) public returns (uint256) {
         address provider = msg.sender;
         clusters.push(Cluster(provider, gpuId, clusterSize, true));
+        return clusters.length;
     }
 
-    function _registerTaskWithSpecificCluster(string memory dataImage, string memory trainImage, uint256 clusterIndex) internal returns (uint256) {
+    function _registerTaskWithSpecificCluster(string memory dataImage, string memory trainImage, uint256 clusterIndex) internal{
         require(clusters[clusterIndex].available, "This GPU Cluster has been chosen");
         clusters[clusterIndex].available = false;
 
@@ -44,11 +59,15 @@ contract Scheduler {
         tasks.push(Task(provider, client, clusterIndex, dataImage, trainImage, 0));
 
         emit StartRun(provider, tasks.length-1, dataImage, trainImage);
-
-        return tasks.length - 1;            // task index
+          // task index
+        if (client == msg.sender) {
+            emit TaskAccessed(client, msg.sender, true);
+        } else {
+            emit TaskAccessed(client, msg.sender, false);
+        }
     }
 
-    function registerTaskWithConditions(string memory dataImage, string memory trainImage, uint256 gpuId, uint256 clusterSize) public returns (uint256) {
+    function registerTaskWithConditions(string memory dataImage, string memory trainImage, uint256 gpuId, uint256 clusterSize) public {
         uint256[] memory suitable_clusters = new uint256[](clusters.length);
         uint256 index = 0;
         for (uint256 i=0; i<clusters.length; i++) {
@@ -61,10 +80,12 @@ contract Scheduler {
 
         // random
         index = _getRandomNumber() % index;
-        return _registerTaskWithSpecificCluster(dataImage, trainImage, suitable_clusters[index]);       // return task index
+        _registerTaskWithSpecificCluster(dataImage, trainImage, suitable_clusters[index]);       // return task index
+        token.transferFrom(msg.sender, address(this), 1000);
+        token.approve(clusters[suitable_clusters[index]].provider, 1000);
     }
 
-    function updateStatus(uint256 taskIndex, uint256 newStatus) public {
+    function updateStatus(uint256 taskIndex, uint256 newStatus) public { // add time paremeter (s)
         /*
            0: scheduling: waiting for the provider checking and update the status to 'downloading'
            1: downloading
@@ -80,6 +101,9 @@ contract Scheduler {
         if (newStatus == 3 || newStatus == 4){
             clusters[task.clusterIndex].available = true;
         }
+        if (newStatus == 4){
+            token.transferFrom(address(this), task.provider, 1000);
+        }
     }
 
     function getNumberOfClusters() public view returns (uint256) {
@@ -94,17 +118,35 @@ contract Scheduler {
         return clusters;
     }
 
-    function getTasks() public view returns (Task[] memory) {
-        Task[] memory userTasks = new Task[](tasks.length);
+    function getAllTasks() public view returns (Task[] memory) {
+        return tasks;
+    }
+
+    function getTasks(address sender) public view returns (Task[] memory) {
         uint256 userTasksCount = 0;
+        uint256 errorCount = 0;
+        Log[] memory log = new Log[](tasks.length);
+        // Count the number of tasks belonging to the caller
         for (uint256 i = 0; i < tasks.length; i++) {
-            if (tasks[i].provider == msg.sender) {
-                userTasks[userTasksCount] = tasks[i];
+            if (tasks[i].client == sender) {
                 userTasksCount++;
+            } else {
+                errorCount++;
             }
+            log[i].client = tasks[i].client;
+            log[i].sender = sender;
         }
-        assembly {
-            mstore(userTasks, userTasksCount)
+
+        // Allocate memory for userTasks array
+        Task[] memory userTasks = new Task[](userTasksCount);
+        
+        // Copy matching tasks into userTasks array
+        uint256 index = 0;
+        for (uint256 i = 0; i < tasks.length; i++) {
+            if (tasks[i].client == sender) {
+                userTasks[index] = tasks[i];
+                index++;
+            }
         }
         return userTasks;
     }
